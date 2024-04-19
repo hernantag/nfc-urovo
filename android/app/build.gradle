@@ -22,10 +22,12 @@ if (flutterVersionName == null) {
     flutterVersionName = '1.0'
 }
 
+apply plugin: 'kotlin-android'
+
 android {
     namespace "com.example.ncf_testing"
     compileSdkVersion 34
-    ndkVersion flutter.ndkVersion
+
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8

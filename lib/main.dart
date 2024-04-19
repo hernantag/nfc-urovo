@@ -1,9 +1,14 @@
-import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
 
+import 'package:bitmap/bitmap.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_nfc_kit/flutter_nfc_kit.dart';
-import 'package:nfc_manager/nfc_manager.dart';
+import 'package:image/image.dart' as img;
+import 'package:ncf_testing/models/impresora_model/impresora.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:pdf_image_renderer/pdf_image_renderer.dart';
 
 void main() {
   runApp(const MyApp());
@@ -53,6 +58,26 @@ class HomeState extends State<Home> {
 
   final MethodChannel channel =
       MethodChannel("com.macamedia.nfctest/piccmanager");
+  final Impresora impresora = Impresora();
+
+  void imprimirPdf() async {
+    try {
+      final Dio dio = Dio();
+
+      final Directory tempDir = await getTemporaryDirectory();
+      final String path = "${tempDir.path}/ult-ticket.pdf";
+
+      final respuesta =
+          await dio.download("https://pdfobject.com/pdf/sample.pdf", path);
+
+      await impresora.imprimirPdf(PdfImageRendererPdf(path: path));
+
+      print(respuesta);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -68,7 +93,22 @@ class HomeState extends State<Home> {
                 valor = respuesta;
                 setState(() {});
               },
-              child: Text("XDD"))
+              child: Text("ESCANEAR TAG")),
+          ElevatedButton(
+              onPressed: () async {
+                Bitmap bitmap = await Bitmap.fromProvider(AssetImage(
+                  "assets/doblaje.jpg",
+                ));
+                final respuesta = impresora.imprimirImagen(bitmap);
+              },
+              child: Text("print bitmap")),
+          ElevatedButton(
+              onPressed: () async {
+                final respuesta = impresora.imprimirTexto(
+                    "TICKET MACAMEDIA!!!!!!!\nBuenas este es un ticketazo\n1000peso");
+              },
+              child: Text("print texto")),
+          ElevatedButton(onPressed: imprimirPdf, child: Text("print pdf")),
         ],
       ),
     );
