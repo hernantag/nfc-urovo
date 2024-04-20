@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -5,7 +6,11 @@ import 'package:bitmap/bitmap.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:image/image.dart' as img;
+import 'package:ncf_testing/data.dart';
+import 'package:ncf_testing/data2.dart';
+import 'package:ncf_testing/models/impresion_bitmap_model/impresion_bitmap.dart';
 import 'package:ncf_testing/models/impresora_model/impresora.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf_image_renderer/pdf_image_renderer.dart';
@@ -21,6 +26,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      builder: EasyLoading.init(),
       title: 'Flutter Demo',
       theme: ThemeData(
         // This is the theme of your application.
@@ -55,9 +61,9 @@ class Home extends StatefulWidget {
 
 class HomeState extends State<Home> {
   String? valor;
-
+  Bitmap? muestra;
   final MethodChannel channel =
-      MethodChannel("com.macamedia.nfctest/piccmanager");
+      const MethodChannel("com.macamedia.nfctest/piccmanager");
   final Impresora impresora = Impresora();
 
   void imprimirPdf() async {
@@ -67,15 +73,47 @@ class HomeState extends State<Home> {
       final Directory tempDir = await getTemporaryDirectory();
       final String path = "${tempDir.path}/ult-ticket.pdf";
 
-      final respuesta =
-          await dio.download("https://pdfobject.com/pdf/sample.pdf", path);
+      /* final respuesta = await dio.download(
+          "https://elblogdehiara.wordpress.com/wp-content/uploads/2015/01/interpretar-un-ticket-de-la-compra.pdf",
+          path); */
+
+      /* File(path).writeAsBytesSync(respuesta.data); */
+
+      final bytes = await rootBundle.load("assets/doc.pdf");
+
+      final buffer = bytes.buffer;
+      await File(path).writeAsBytes(
+          buffer.asUint8List(bytes.offsetInBytes, bytes.lengthInBytes));
 
       await impresora.imprimirPdf(PdfImageRendererPdf(path: path));
+    } on DioException catch (e) {
+      if (e.response?.statusCode == null) {
+        EasyLoading.showToast("Fallo en la conexión");
+      }
+      rethrow;
+    } catch (e) {
+      EasyLoading.showToast("Ocurrio un error ${e}");
+      rethrow;
+    }
+  }
 
-      print(respuesta);
+  Future<void> imprimirBitmap() async {
+    try {
+      final Bitmap bitmap =
+          await Bitmap.fromProvider(AssetImage("assets/escudo.jpg"));
+
+      muestra = bitmap;
+      setState(() {});
+
+      await Impresora().imprimirImagen(bitmap);
     } catch (e) {
       rethrow;
     }
+  }
+
+  Future<void> imprimirTexto() async {
+    final respuesta = impresora.imprimirTexto(
+        "TICKET MACAMEDIA!!!!!!!\nBuenas este es un ticketazo\n1000peso");
   }
 
   @override
@@ -86,7 +124,7 @@ class HomeState extends State<Home> {
       ),
       body: Column(
         children: [
-          Text(valor ?? "No escaneamos nada aun"),
+          Text(valor ?? "No escaneamos nada auna"),
           ElevatedButton(
               onPressed: () async {
                 final respuesta = await channel.invokeMethod("antisel");
@@ -94,23 +132,25 @@ class HomeState extends State<Home> {
                 setState(() {});
               },
               child: Text("ESCANEAR TAG")),
+          if (muestra != null) Image.memory(muestra!.buildHeaded()),
           ElevatedButton(
-              onPressed: () async {
-                Bitmap bitmap = await Bitmap.fromProvider(AssetImage(
-                  "assets/doblaje.jpg",
-                ));
-                final respuesta = impresora.imprimirImagen(bitmap);
-              },
-              child: Text("print bitmap")),
-          ElevatedButton(
-              onPressed: () async {
-                final respuesta = impresora.imprimirTexto(
-                    "TICKET MACAMEDIA!!!!!!!\nBuenas este es un ticketazo\n1000peso");
-              },
-              child: Text("print texto")),
+              onPressed: imprimirBitmap, child: const Text("print bitmap")),
+          ElevatedButton(onPressed: imprimirTexto, child: Text("print texto")),
           ElevatedButton(onPressed: imprimirPdf, child: Text("print pdf")),
         ],
       ),
     );
+  }
+}
+
+class ImageSender {
+  static const platform = MethodChannel('com.example.image_channel');
+
+  static Future<void> sendImage(Uint8List imageData) async {
+    try {
+      await platform.invokeMethod('receiveImage', {'imageData': imageData});
+    } on PlatformException catch (e) {
+      print("Error al enviar la imagen: '${e.message}'.");
+    }
   }
 }
