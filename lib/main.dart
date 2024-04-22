@@ -1,16 +1,10 @@
-import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:bitmap/bitmap.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
-import 'package:image/image.dart' as img;
-import 'package:ncf_testing/data.dart';
-import 'package:ncf_testing/data2.dart';
-import 'package:ncf_testing/models/impresion_bitmap_model/impresion_bitmap.dart';
 import 'package:ncf_testing/models/impresora_model/impresora.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf_image_renderer/pdf_image_renderer.dart';
@@ -100,7 +94,7 @@ class HomeState extends State<Home> {
   Future<void> imprimirBitmap() async {
     try {
       final Bitmap bitmap =
-          await Bitmap.fromProvider(AssetImage("assets/escudo.jpg"));
+          await Bitmap.fromProvider(AssetImage("assets/doblaje2.jpg"));
 
       muestra = bitmap;
       setState(() {});
@@ -111,8 +105,8 @@ class HomeState extends State<Home> {
     }
   }
 
-  Future<void> imprimirTexto() async {
-    final respuesta = impresora.imprimirTexto(
+  Future<void> imprimirTexto(String texto) async {
+    impresora.imprimirTexto(
         "TICKET MACAMEDIA!!!!!!!\nBuenas este es un ticketazo\n1000peso");
   }
 
@@ -135,22 +129,12 @@ class HomeState extends State<Home> {
           if (muestra != null) Image.memory(muestra!.buildHeaded()),
           ElevatedButton(
               onPressed: imprimirBitmap, child: const Text("print bitmap")),
-          ElevatedButton(onPressed: imprimirTexto, child: Text("print texto")),
+          ElevatedButton(
+              onPressed: () => imprimirTexto("Holitas"),
+              child: Text("print texto")),
           ElevatedButton(onPressed: imprimirPdf, child: Text("print pdf")),
         ],
       ),
     );
-  }
-}
-
-class ImageSender {
-  static const platform = MethodChannel('com.example.image_channel');
-
-  static Future<void> sendImage(Uint8List imageData) async {
-    try {
-      await platform.invokeMethod('receiveImage', {'imageData': imageData});
-    } on PlatformException catch (e) {
-      print("Error al enviar la imagen: '${e.message}'.");
-    }
   }
 }

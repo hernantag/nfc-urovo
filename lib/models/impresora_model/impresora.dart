@@ -9,7 +9,8 @@ class Impresora {
   final MethodChannel channel =
       const MethodChannel("com.macamedia.nfctest/piccmanager");
 
-  Future<void> imprimirImagen(Bitmap bitmap) async {
+  Future<void> imprimirImagen(Bitmap bitmap,
+      {bool forzarMonocromatico = true}) async {
     try {
       final bitmapMono = Bitmap.fromHeadless(
           bitmap.width,
@@ -18,13 +19,17 @@ class Impresora {
               bitmap.content, bitmap.width, bitmap.height));
 
       await channel.invokeMethod(
-          "printBitmap", base64.encode(bitmap.buildHeaded()));
+          "printBitmap",
+          base64.encode(forzarMonocromatico
+              ? bitmapMono.buildHeaded()
+              : bitmap.buildHeaded()));
     } catch (e) {
       rethrow;
     }
   }
 
-  Future<void> imprimirPdf(PdfImageRendererPdf pdf) async {
+  Future<void> imprimirPdf(PdfImageRendererPdf pdf,
+      {bool forzarMonocromatico = false}) async {
     try {
       await pdf.open();
       await pdf.openPage(pageIndex: 0);
@@ -46,7 +51,7 @@ class Impresora {
 
       final Bitmap bitmapPdf = await Bitmap.fromProvider(MemoryImage(img!));
 
-      await imprimirImagen(bitmapPdf);
+      await imprimirImagen(bitmapPdf, forzarMonocromatico: forzarMonocromatico);
     } catch (e) {
       rethrow;
     }
@@ -78,7 +83,7 @@ class Impresora {
       final luminance = 0.2126 * R + 0.7152 * G + 0.0722 * B;
 
       // Establecer el bit correspondiente en el Uint8List de 1 bit por píxel
-      if (luminance < 0.55) {
+      if (luminance < 0.6) {
         // Si el valor de luminancia es bajo, establecer el bit como 1 (negro)
         monochromeData[i] = 0;
         monochromeData[i + 1] = 0;
